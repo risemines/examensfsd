@@ -6,6 +6,8 @@ typedef struct fbloc{
   int key;
   int svt;
 };
+
+
 int recherche(FILE *fichier, char nom){
   struct fbloc bloc;
   int i=0;
@@ -19,9 +21,20 @@ int recherche(FILE *fichier, char nom){
   printf("bloc non trouve");
   return 0;
 }  
+
+
+void lire(FILE *fichier, struct fbloc *bloc){
+  fread(bloc,sizeof(struct fbloc),1,fichier);
+}
+
+void ecrire(FILE *fichier, struct fbloc *bloc){
+  fwrite(bloc, sizeof(struct fbloc), 1, fichier);
+}
+
+
 int  main(){
   FILE *fichier;
-  struct bloc buffer;
+  struct fbloc buffer;
 fichier = fopen("","");
 
 if (fichier == NULL){
