@@ -1,10 +1,93 @@
+
+
+
+
+
+//-------------------------aff_entete----------------------------//
+void aff_entete(LOV *fichier,int i , int valeur)
+{
+
+    switch(i)
+    {
+        case 1:
+        {
+            fichier->entete.nbbloc=valeur; // nombre total de bloc alloués dans le fichier
+        }break;
+         case 2:
+        {
+            fichier->entete.tete=valeur;  // numero du bloc representatnt la tete du fichier
+        }break;
+         case 3:
+        {
+            fichier->entete.queue=valeur;  // numero du bloc representatnt la tete duf icheir
+        }break;
+         
+         case 4:
+        {
+            fichier->entete.nb_car_sup=valeur;  // nombre de caractères suprimé depuis la
+                                                  //création du ficher afin de lancer la réorganiosation
+        }break;
+
+    };
+}
+
+//-------------------------------------permet d'obtenir les elements de l'entete du ficher------------------------------//
+int entete(LOV *fichier, int i)
+{
+
+    switch(i)
+    {
+        case 1:
+        {
+            return(fichier->entete.nbbloc);
+        }break;
+         case 2:
+        {
+            return(fichier->entete.tete);
+        }break;
+         case 3:
+        {
+            return(fichier->entete.queue);
+        }break;
+        
+         case 4:
+        {
+            return(fichier->entete.nb_car_sup);
+        }break;
+
+    };
+}
+//----------------------liredir-------------------//
+void liredir(LOV *fichier, int i , Buffer *buf)
+{
+
+ fseek(fichier->fich,(sizeof(Entete)+sizeof(Tbloc)*(i-1)),SEEK_SET); // positionnement au debut du bloc numero i
+ fread(buf,sizeof(Buffer),1,fichier->fich);                         //lecture d'un bloc de caractère correspondant a la taille du bloc dans le buffer
+ rewind(fichier->fich);                                            // repositionnement endebut de fichier
+
+}
+//-------------------------ecriredir------------------------------------------//
+void ecriredir(LOV *fichier, int i, Buffer *buf)
+{
+
+     fseek(fichier->fich,sizeof(Entete)+sizeof(Tbloc)*(i-1),SEEK_SET); // positionnement au debut du bloc numero i
+     fwrite(buf,sizeof(Buffer),1,fichier->fich);                       //ecriture du contenu du buffer dans le bloc numero i du fichier
+
+}
+
+
+
+
+
+
+
 //----------------------- focntion de suppression lohgique dans le fichier--------------------------------------------//
-void suppression_logique_L7OVC(L7OVC *fichier, int cle)
+void suppression_logique_LOV(LOV *fichier, int cle)
 {
     int i,j,trouv;
     Buffer buf;
     char *chaine=malloc(sizeof(char)*3);
-    recherche_L7OVC(fichier,cle,&trouv,&i,&j); // recherche de la cle fdans le fichihre
+    recherche_LOV(fichier,cle,&trouv,&i,&j); // recherche de la cle fdans le fichihre
     if(trouv==1)                                // si la cmle a etet trouvee
     {
         liredir(fichier,i,&buf);   // lecture du bloc dans lequel on a trouvé l'info
