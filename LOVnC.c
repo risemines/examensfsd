@@ -50,18 +50,18 @@ void fermer(LOV *f){
   free(f); //liberer lespace memoire alloue
 }
 
-void liredir(LOV *f, int i, Buffer *buf){  //lire un bloc
+void lireBloc(LOV *f, int i, Buffer *buf){  //lire un bloc
  fseek(f->fichier,(sizeof(Entete)+sizeof(Tbloc)*(i-1)),SEEK_SET); // positionnement au debut du bloc numero i
  fread(buf,sizeof(Buffer),1,f->fichier);                         //lecture d'un seul bloc de caractère correspondant a la taille du bloc dans le buffer
  rewind(f->fichier);                                            // repositionnement au debut du fichier
 }
  
-void ecriredir(LOV *f,int i, Buffer *buf){  //ecrire un bloc
+void ecrireBloc(LOV *f,int i, Buffer *buf){  //ecrire un bloc
   fseek(f->fichier, sizeof(Entete) + sizeof(Tbloc)*(i-1), SEEK_SET); // positionnement au debut du bloc numero i
   fwrite(buf, sizeof(struct Tbloc), 1, f);  //ecrire un seul bloc de caractère correspondant a la taille du bloc dans le buffer
 }
 
-int recupentete(LOV *f, int i){
+int EnTete(LOV *f, int i){
   Entete entete;
   fread(&entete, sizeof(struct Entete),1,f); //lecture de l'en tete
   switch(i){
@@ -76,7 +76,7 @@ int recupentete(LOV *f, int i){
   }
 }
 
-void affectation_entete(LOV *f, int i, int x){ // changer les valeurs de l'en tete
+void affecterEntete(LOV *f, int i, int x){ // changer les valeurs de l'en tete
   switch(i){
    case 1: f->entete.premier=x;
    break;
@@ -89,10 +89,10 @@ void affectation_entete(LOV *f, int i, int x){ // changer les valeurs de l'en te
   } 
 }
 
-int allocBloc(LOV *f) //permet dallouer un nv bloc
+int allouerBloc(LOV *f) //permet dallouer un nv bloc
 {
-    affectation_entete(f, 4, entete(f, 4) + 1); //incremente le nb de bloc par 1
-    return recupentete(f, 4); //retourne le nb de blocs
+    affecterEntete(f, 4, entete(f, 4) + 1); //incremente le nb de bloc par 1
+    return EnTete(f, 4); //retourne le nb de blocs
 }
 
 
@@ -100,15 +100,15 @@ int allocBloc(LOV *f) //permet dallouer un nv bloc
 
 void recherche(LOV *f, int cle, bool *trouve, int *i, int *j){
  *trouve=0;
- *i= recupentete(f,1); //indice pointe sur le numero de bloc;
+ *i= EnTete(f,1); //indice pointe sur le numero de bloc;
  *j=0;
  Buffer buf;
- liredir(f, *i, &buf);
+ lireBloc(f, *i, &buf);
 
 }
 
 //----------------------- fonction de suppression logique dans le fichier--------------------------------------------//
-void suppression_logique_LOV(LOV *f, int cle)
+void suppression_logique(LOV *f, int cle)
 {
     int i,j,trouve;
     Buffer buf;
@@ -143,28 +143,24 @@ int  main(){
 
 
 /*
-void affectation_entete(LOV *f,int i , int x);
-int recupentete(LOV *f, int i);
-void liredir( LOV *f, int i , Buffer *buf);
-void ecriredir(LOV *f, int i, Buffer *buf);
+void affecterEntete(LOV *f,int i , int x);
+int EnTete(LOV *f, int i);
+void lireBloc( LOV *f, int i , Buffer *buf);
+void ecrireBloc(LOV *f, int i, Buffer *buf);
 LOV  ouvrir(LOV **f, char nom[]);
 void fermer(LOV *f);
-void alloc_bloc(LOV *f);
+void allouerBloc(LOV *f);
 void turn_to_string(char chaine[], int n, int longueur);
 void recuperer_chaine(LOV *f,int n , int *i, int *j, char chaine[],Buffer *buf);
 void ecrire_chaine(LOV *f,int n , int *i, int *j, char chaine[],int *cpt,Buffer *buf);
-void recherche_LOV(LOV *f,int cle,int *trouv,int *i, int *j );
-void insertion_LOV(LOV *f, int cle, char *info) ;
-void suppression_logique_LOV(LOV *f, int cle);
+void recherche(LOV *f,int cle,int *trouv,int *i, int *j );
+void insertion(LOV *f, int cle, char *info) ;
+void suppression_logique(LOV *f, int cle);
 void afficher_bloc(LOV *f,int i);
 void afficher_f(LOV *f);
-void afficher_info_chevau(LOV *f);
 void recherche_min(LOV *f,int MIN, int *i, int *j,int *val);
 int max_f(LOV *f);
 void reordonner_f(LOV *f1,char *nom);
-void suppression_physique_LOV(LOV *f,char *nom);
 void creation_f(LOV *f,int n);
 void afficher_entete(LOV *f);
-void cadre();
-void choice();
-void manuel(); */
+ */
