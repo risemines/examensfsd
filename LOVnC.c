@@ -32,9 +32,9 @@ typedef struct LOV{
 
 void ouvrir (LOV **f, char nom[25]){ //liste chainee
  *f=malloc(sizeof(LOV)); //*f pointe sur la structure LOV
- (*f)->fichier = fopen(nom, "wb+"); //creer un f
- if((*f)->fichier != NULL){
-  (*f)->entete.insert=0;
+ (*f)->fichier = fopen(nom, "wb+"); //creer un nouveau f
+ if((*f)->fichier != NULL){ 
+  (*f)->entete.insert=0; // initialiser l'entete
   (*f)->entete.nbloc=1;
   (*f)->entete.sup=0;
   (*f)->entete.premier=1;
@@ -57,26 +57,26 @@ void liredir(LOV *f, int i, Buffer *buf){  //lire un bloc
 }
  
 void ecriredir(LOV *f,int i, Buffer *buf){  //ecrire un bloc
-  fseek(f->fichier, sizeof(Entete) + sizeof(Tbloc)*(i-1), SEEK_SET);
-  fwrite(buf, sizeof(struct Tbloc), 1, f);
+  fseek(f->fichier, sizeof(Entete) + sizeof(Tbloc)*(i-1), SEEK_SET); // positionnement au debut du bloc numero i
+  fwrite(buf, sizeof(struct Tbloc), 1, f);  //ecrire un seul bloc de caractère correspondant a la taille du bloc dans le buffer
 }
 
-int recupentete(FILE *f, int i){
-  struct Entete entete;
-  fread(&entete, sizeof(struct Entete),1,f);
+int recupentete(LOV *f, int i){
+  Entete entete;
+  fread(&entete, sizeof(struct Entete),1,f); //lecture de l'en tete
   switch(i){
-   case 1: return entete.premier;
+   case 1: return f->entete.premier;
    break;
-   case 2: return entete.insert;
+   case 2: return f->entete.insert;
    break;
-   case 3: return entete.sup;
+   case 3: return f->entete.sup;
    break;
-   case 4: return entete.nbloc;
+   case 4: return f->entete.nbloc;
    break;
   }
 }
 
-void affectation_entete(LOV *f, int i, int x){
+void affectation_entete(LOV *f, int i, int x){ // changer les valeurs de l'en tete
   switch(i){
    case 1: f->entete.premier=x;
    break;
@@ -95,13 +95,25 @@ int allocBloc(LOV *f) //permet dallouer un nv bloc
     return recupentete(f, 4); //retourne le nb de blocs
 }
 
-//----------------------- focntion de suppression lohgique dans le fichier--------------------------------------------//
+
+//----------------------- fonction de la recherche dans le fichier--------------------------------------------//
+
+void recherche(LOV *f, int cle, bool *trouve, int *i, int *j){
+ *trouve=0;
+ *i= recupentete(f,1); //indice pointe sur le numero de bloc;
+ *j=0;
+ Buffer buf;
+ liredir(f, *i, &buf);
+
+}
+
+//----------------------- fonction de suppression logique dans le fichier--------------------------------------------//
 void suppression_logique_LOV(LOV *f, int cle)
 {
     int i,j,trouve;
     Buffer buf;
     char *chaine=malloc(sizeof(char)*3);
-    recherche_LOV(f,cle,&trouve,&i,&j); // recherche de la cle fdans le fichihre
+    recherche(f,cle,&trouve,&i,&j); // recherche de la cle fdans le fichihre
     if(trouve==1)                                // si la cle a ete trouvee
     {
         liredir(f,i,&buf);   // lecture du bloc dans lequel on a trouvé l'info
