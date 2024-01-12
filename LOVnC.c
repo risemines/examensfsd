@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#define false 0
-#define true 1
 
 
 typedef struct Tbloc{
@@ -28,14 +26,14 @@ typedef struct Entete{
 }Entete;
 
 typedef struct LOV{
-  FILE *f;
+  FILE *fichier;
   Entete entete;
 }LOV;
 
 void ouvrir (LOV **f, char nom[25]){ //liste chainee
  *f=malloc(sizeof(LOV)); //*f pointe sur la structure LOV
- (*f)->f = fopen(nom, wb+); //creer un f
- if((*f)->f != NULL){
+ (*f)->fichier = fopen(nom, "wb+"); //creer un f
+ if((*f)->fichier != NULL){
   (*f)->entete.insert=0;
   (*f)->entete.nbloc=1;
   (*f)->entete.sup=0;
@@ -46,18 +44,21 @@ void ouvrir (LOV **f, char nom[25]){ //liste chainee
 }
 
 void fermer(LOV *f){
-  rewind(f->f); //reinitialiser la position du curseur au debut de f 
-  fwrite(&(f->entete),sizeof(Entete),1,f->f); //ecrire l'entete
-  fclose(f->f); //fermer le f
+  rewind(f->fichier); //reinitialiser la position du curseur au debut de f 
+  fwrite(&(f->entete),sizeof(Entete),1,f->fichier); //ecrire l'entete
+  fclose(f->fichier); //fermer le f
   free(f); //liberer lespace memoire alloue
 }
 
-void liredir(FILE *f, int i, struct fbloc *buffer){
-  fread(buffer,sizeof(struct Tbloc),1,f);
+void liredir(LOV *f, int i, Buffer *buf){  //lire un bloc
+ fseek(f->fichier,(sizeof(Entete)+sizeof(Tbloc)*(i-1)),SEEK_SET); // positionnement au debut du bloc numero i
+ fread(buf,sizeof(Buffer),1,f->fichier);                         //lecture d'un seul bloc de caractère correspondant a la taille du bloc dans le buffer
+ rewind(f->fichier);                                            // repositionnement au debut du fichier
 }
  
-void ecriredir(FILE *f,int i, struct fbloc *buffer){
-  fwrite(buffer, sizeof(struct Tbloc), 1, f);
+void ecriredir(LOV *f,int i, Buffer *buf){  //ecrire un bloc
+  fseek(f->fichier, sizeof(Entete) + sizeof(Tbloc)*(i-1), SEEK_SET);
+  fwrite(buf, sizeof(struct Tbloc), 1, f);
 }
 
 int recupentete(FILE *f, int i){
@@ -88,19 +89,41 @@ void affectation_entete(LOV *f, int i, int x){
   } 
 }
 
+int allocBloc(LOV *f) //permet dallouer un nv bloc
+{
+    affectation_entete(f, 4, entete(f, 4) + 1); //incremente le nb de bloc par 1
+    return recupentete(f, 4); //retourne le nb de blocs
+}
 
-
+//----------------------- focntion de suppression lohgique dans le fichier--------------------------------------------//
+void suppression_logique_LOV(LOV *f, int cle)
+{
+    int i,j,trouve;
+    Buffer buf;
+    char *chaine=malloc(sizeof(char)*3);
+    recherche_LOV(f,cle,&trouve,&i,&j); // recherche de la cle fdans le fichihre
+    if(trouve==1)                                // si la cle a ete trouvee
+    {
+        liredir(f,i,&buf);   // lecture du bloc dans lequel on a trouvé l'info
+        recuperer_chaine(f,3,&i,&j,chaine,&buf); // recuperation de la chaine correpondant a la taille de l'info
+        buf.tab[j]='v';          // mise du champs efface a vrai
+        ecriredir(f,i,&buf);                  // reecriture du bloc
+        affectation_entete(f,4,entete(f,4)+atoi(chaine)+9); // mise a jour du nombre de caractère supprimes
+        printf("\nsuppression logique reussie\n");
+    }
+    else
+    {
+        printf("\n   suppression impossible clé inexistante\n");
+    }
+}
 
 
 int  main(){
-  FILE *f;
-f = fopen("","");
-
-if (f == NULL){
-printf("erreur");
-return 1;
-}
-fclose(f);
+  LOV *f;
+  char nom[25];
+  printf("entrer un nom pr votre fichier");
+  scanf("%s", &nom);
+  ouvrir (f, nom);
 
 }
 
