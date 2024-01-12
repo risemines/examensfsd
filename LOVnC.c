@@ -32,6 +32,25 @@ typedef struct LOV{
   Entete entete;
 }LOV;
 
+void ouvrir (LOV **f, char nom[25]){ //liste chainee
+ *f=malloc(sizeof(LOV)); //*f pointe sur la structure LOV
+ (*f)->fichier = fopen(nom, wb+); //creer un fichier
+ if((*f)->fichier != NULL){
+  (*f)->entete.insert=0;
+  (*f)->entete.nbloc=1;
+  (*f)->entete.sup=0;
+  (*f)->entete.premier=1;
+
+ }
+
+}
+
+void fermer(LOV *f){
+  rewind(f->fichier); //reinitialiser la position du curseur au debut de fichier 
+  fwrite(&(f->entete),sizeof(Entete),1,f->fichier); //ecrire l'entete
+  fclose(f->fichier); //fermer le fichier
+  free(f); //liberer lespace memoire alloue
+}
 
 void lire(FILE *fichier, int i, struct fbloc *buffer){
   fread(buffer,sizeof(struct Tbloc),1,fichier);
@@ -55,6 +74,23 @@ int recupentete(FILE *fichier, int i){
    break;
   }
 }
+
+void affectation_entete(LOV *f, int i, int x){
+  switch(i){
+   case 1: f->entete.premier=x;
+   break;
+   case 2: f->entete.insert=x;
+   break;
+   case 3: f->entete.sup=x;
+   break;
+   case 4: f->entete.nbloc=x;
+   break;
+  } 
+}
+
+
+
+
 
 int  main(){
   FILE *fichier;
