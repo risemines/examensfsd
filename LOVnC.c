@@ -16,7 +16,7 @@ typedef Tbloc Buffer;
 typedef struct Etudiant{
   char nom[25];
   char prenom[25];
-  char key[4]; //pr la recherche
+  char cle[4]; //pr la recherche
   char taille[4];
 }Etudiant;
 
@@ -28,14 +28,14 @@ typedef struct Entete{
 }Entete;
 
 typedef struct LOV{
-  FILE *fichier;
+  FILE *f;
   Entete entete;
 }LOV;
 
 void ouvrir (LOV **f, char nom[25]){ //liste chainee
  *f=malloc(sizeof(LOV)); //*f pointe sur la structure LOV
- (*f)->fichier = fopen(nom, wb+); //creer un fichier
- if((*f)->fichier != NULL){
+ (*f)->f = fopen(nom, wb+); //creer un f
+ if((*f)->f != NULL){
   (*f)->entete.insert=0;
   (*f)->entete.nbloc=1;
   (*f)->entete.sup=0;
@@ -46,23 +46,23 @@ void ouvrir (LOV **f, char nom[25]){ //liste chainee
 }
 
 void fermer(LOV *f){
-  rewind(f->fichier); //reinitialiser la position du curseur au debut de fichier 
-  fwrite(&(f->entete),sizeof(Entete),1,f->fichier); //ecrire l'entete
-  fclose(f->fichier); //fermer le fichier
+  rewind(f->f); //reinitialiser la position du curseur au debut de f 
+  fwrite(&(f->entete),sizeof(Entete),1,f->f); //ecrire l'entete
+  fclose(f->f); //fermer le f
   free(f); //liberer lespace memoire alloue
 }
 
-void lire(FILE *fichier, int i, struct fbloc *buffer){
-  fread(buffer,sizeof(struct Tbloc),1,fichier);
+void liredir(FILE *f, int i, struct fbloc *buffer){
+  fread(buffer,sizeof(struct Tbloc),1,f);
+}
+ 
+void ecriredir(FILE *f,int i, struct fbloc *buffer){
+  fwrite(buffer, sizeof(struct Tbloc), 1, f);
 }
 
-void ecrire(FILE *fichier,int i, struct fbloc *buffer){
-  fwrite(buffer, sizeof(struct Tbloc), 1, fichier);
-}
-
-int recupentete(FILE *fichier, int i){
+int recupentete(FILE *f, int i){
   struct Entete entete;
-  fread(&entete, sizeof(struct Entete),1,fichier);
+  fread(&entete, sizeof(struct Entete),1,f);
   switch(i){
    case 1: return entete.premier;
    break;
@@ -93,13 +93,43 @@ void affectation_entete(LOV *f, int i, int x){
 
 
 int  main(){
-  FILE *fichier;
-fichier = fopen("","");
+  FILE *f;
+f = fopen("","");
 
-if (fichier == NULL){
+if (f == NULL){
 printf("erreur");
 return 1;
 }
-fclose(fichier);
+fclose(f);
 
 }
+
+
+
+
+/*
+void affectation_entete(LOV *f,int i , int x);
+int recupentete(LOV *f, int i);
+void liredir( LOV *f, int i , Buffer *buf);
+void ecriredir(LOV *f, int i, Buffer *buf);
+LOV  ouvrir(LOV **f, char nom[]);
+void fermer(LOV *f);
+void alloc_bloc(LOV *f);
+void turn_to_string(char chaine[], int n, int longueur);
+void recuperer_chaine(LOV *f,int n , int *i, int *j, char chaine[],Buffer *buf);
+void ecrire_chaine(LOV *f,int n , int *i, int *j, char chaine[],int *cpt,Buffer *buf);
+void recherche_LOV(LOV *f,int cle,int *trouv,int *i, int *j );
+void insertion_LOV(LOV *f, int cle, char *info) ;
+void suppression_logique_LOV(LOV *f, int cle);
+void afficher_bloc(LOV *f,int i);
+void afficher_f(LOV *f);
+void afficher_info_chevau(LOV *f);
+void recherche_min(LOV *f,int MIN, int *i, int *j,int *val);
+int max_f(LOV *f);
+void reordonner_f(LOV *f1,char *nom);
+void suppression_physique_LOV(LOV *f,char *nom);
+void creation_f(LOV *f,int n);
+void afficher_entete(LOV *f);
+void cadre();
+void choice();
+void manuel(); */
