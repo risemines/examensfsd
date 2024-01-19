@@ -1,21 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "fonction.h"
+#define MAX 100 //max car dans un bloc
+
 
 typedef struct Tbloc{
-  char tab[100];
-  int svt;
-  int prd;
+  char tab[MAX];
+  int svt; //bloc suivant
+  int prd; //bloc precedent
+  int nbr; //nb de caracteres inseres dans le bloc
 }Tbloc;
 
 typedef Tbloc Buffer;
 
 typedef struct Etudiant{
+  char identifiant[4]; //une cle specifique pr chaque bloc
+  char taille[3]; //taille du bloc
+  char efface[1];
   char nom[25];
   char prenom[25];
-  char cle[4]; //pr la recherche
-  char taille[4];
+  char matricule[12];
+  char specialite[30];
 }Etudiant;
 
 typedef struct Entete{
@@ -30,15 +35,35 @@ typedef struct LOV{
   Entete entete;
 }LOV;
 
-void ouvrir (LOV **f, char nom[25]){ //liste chainee
- *f=malloc(sizeof(LOV)); //*f pointe sur la structure LOV
+void ouvrir (LOV **f, char nom[25], char mode);
+void fermer(LOV *f);
+void lireBloc(LOV *f, int i, Buffer *buf);
+void ecrireBloc(LOV *f,int i, Buffer *buf);
+int EnTete(LOV *f, int i);
+void affecterEntete(LOV *f, int i, int x);
+int allouerBloc(LOV *f);
+void recherche(LOV *f, int cle, bool *trouve, int *i, int *j);
+void suppression_logique(LOV *f, int cle);
+
+
+void *ouvrir (LOV **f, char nom[25], char mode){ //liste chainee
+ (**f)=malloc(sizeof(LOV)); //*f pointe sur la structure LOV
+ if(mode=='a' || mode=='A')
+ {
+    (*f)->fichier=fopen(nom, "rb+");
+    if((*f)->fichier != NULL){
+        fread(&(*f)->entete, sizeof(EnTete),1, (*f)->fichier);
+    }
+ }
+ else if(mode=='n' || mode=='N'){
  (*f)->fichier = fopen(nom, "wb+"); //creer un nouveau f
+
  if((*f)->fichier != NULL){ 
   (*f)->entete.insert=0; // initialiser l'entete
   (*f)->entete.nbloc=1;
   (*f)->entete.sup=0;
   (*f)->entete.premier=1;
-
+ }
  }
 
 }
@@ -53,17 +78,15 @@ void fermer(LOV *f){
 void lireBloc(LOV *f, int i, Buffer *buf){  //lire un bloc
  fseek(f->fichier,(sizeof(Entete)+sizeof(Tbloc)*(i-1)),SEEK_SET); // positionnement au debut du bloc numero i
  fread(buf,sizeof(Buffer),1,f->fichier);                         //lecture d'un seul bloc de caractère correspondant a la taille du bloc dans le buffer
- rewind(f->fichier);                                            // repositionnement au debut du fichier
+
 }
  
 void ecrireBloc(LOV *f,int i, Buffer *buf){  //ecrire un bloc
   fseek(f->fichier, sizeof(Entete) + sizeof(Tbloc)*(i-1), SEEK_SET); // positionnement au debut du bloc numero i
-  fwrite(buf, sizeof(struct Tbloc), 1, f);  //ecrire un seul bloc de caractère correspondant a la taille du bloc dans le buffer
+  fwrite(buf, sizeof(struct Tbloc), 1, f->fichier);  //ecrire un seul bloc de caractère correspondant a la taille du bloc dans le buffer
 }
 
 int EnTete(LOV *f, int i){
-  Entete entete;
-  fread(&entete, sizeof(struct Entete),1,f); //lecture de l'en tete
   switch(i){
    case 1: return f->entete.premier;
    break;
@@ -91,46 +114,77 @@ void affecterEntete(LOV *f, int i, int x){ // changer les valeurs de l'en tete
 
 int allouerBloc(LOV *f) //permet dallouer un nv bloc
 {
-    affecterEntete(f, 4, entete(f, 4) + 1); //incremente le nb de bloc par 1
+    affecterEntete(f, 4, EnTete(f, 4)+ 1); //incremente le nb de bloc par 1
     return EnTete(f, 4); //retourne le nb de blocs
 }
 
+void recuperechaine(char chaine[], int n, int* i)
+{
+Buffer buf;
+    for(int j=0; j<n-1; j++){
+        chaine[j]=buf.tab[(*i)];
+        (*i)++;
+    }
+}
 
 //----------------------- fonction de la recherche dans le fichier--------------------------------------------//
 
 void recherche(LOV *f, int cle, bool *trouve, int *i, int *j){
  *trouve=0;
- *i= EnTete(f,1); //indice pointe sur le numero de bloc;
+ char identifiant[4];
+ char taille[3];
+ *i= EnTete(f,1); //indice pointe sur le premier bloc;
  *j=0;
+ int j1;
+ j1=*j; //sauvgarder le j
  Buffer buf;
- lireBloc(f, *i, &buf);
-
+ lireBloc(f, *i, &buf); //lire le bloc
+ recuperechaine(identifiant, 5, j);
+ while(atoi(identifiant)>cle){ //atoi fait la conversion du char a un entier
+    recuperechaine(taille, 4, j); // recuperer la taille du bloc
+    *j = (*j) + atoi(taille) - 7;//avencer j au prochain bloc
+    if((*j)>= buf.nbr) //verifier si on a depasser la taille du bloc
+    {
+    if(buf.svt != -1){ //verifier si c le dernier bloc
+        *i=buf.svt; //sinon on avence au bloc suivant
+        *j=0; //initialiser lindice du debut du bloc
+        lireBloc(f, *i, &buf); //lire le bloc svt
+    }
+    else{
+        break;
+    }
+    }
+    j1=*j;
+    recuperechaine(identifiant, 5, j);
+    }
+    if(cle==atoi(identifiant)){
+        (*trouve)=1;
+    }
+    (*trouve)=0;
+    *j=j1;
 }
 
-// Déclaration d'une procédure Suppression_logique
-void Suppression_logique(char c[20], char nomfichier[]) {
+//----------------------- fonction de suppression logique dans le fichier--------------------------------------------//
+void Suppression_logique(LOV *f, int cle, char nomfichier[]) {
     // Déclaration des variables locales
-    bool trouv;
+    bool trouve;
     int i, j;
-
-    // Ouverture du fichier en mode ajout
-    FILE *f = fopen(nomfichier, "a");
-
+    Buffer buf;
     // Recherche de la chaîne c dans le fichier
-    Recherche(c, nomfichier, &trouv, &i, &j);
+    recherche(f, cle, &trouve, &i, &j);
 
     // Si la chaîne c est trouvée
-    if (trouv) {
-        // On avance de 3 positions dans le tableau
-        j = j + 3;
+    if (trouve) {
+        // On avance de 8 positions dans le tableau
+        *j = *j + 8;
 
         // Si on n'a pas dépassé la taille du tableau
-        if (j < b) {
-            // On remplace le caractère par 'V'
-            buf.tab[j] = 'V';
+        if (j < MAX) {
+            // On remplace le caractère par '1'
+            buf.tab[j] = '1';
 
             // On écrit le caractère dans le fichier
-            ecriredir(f, i, j);
+            ecrireBloc(f, i, &buf);
         }
     }
     // Sinon
@@ -138,7 +192,4 @@ void Suppression_logique(char c[20], char nomfichier[]) {
         // On affiche un message d'erreur
         printf("L'élément n'existe pas !\n");
     }
-
-    // Fermeture du fichier
-    fclose(f);
 }
