@@ -107,24 +107,38 @@ void recherche(LOV *f, int cle, bool *trouve, int *i, int *j){
 
 }
 
-//----------------------- fonction de suppression logique dans le fichier--------------------------------------------//
-void suppression_logique(LOV *f, int cle)
-{
-    int i,j,trouve;
-    Buffer buf;
-    char *chaine=malloc(sizeof(char)*3);
-    recherche(f,cle,&trouve,&i,&j); // recherche de la cle fdans le fichihre
-    if(trouve==1)                                // si la cle a ete trouvee
-    {
-        liredir(f,i,&buf);   // lecture du bloc dans lequel on a trouvé l'info
-        recuperer_chaine(f,3,&i,&j,chaine,&buf); // recuperation de la chaine correpondant a la taille de l'info
-        buf.tab[j]='v';          // mise du champs efface a vrai
-        ecriredir(f,i,&buf);                  // reecriture du bloc
-        affectation_entete(f,4,entete(f,4)+atoi(chaine)+9); // mise a jour du nombre de caractère supprimes
-        printf("\nsuppression logique reussie\n");
+// Déclaration d'une procédure Suppression_logique
+void Suppression_logique(char c[20], char nomfichier[]) {
+    // Déclaration des variables locales
+    bool trouv;
+    int i, j;
+
+    // Ouverture du fichier en mode ajout
+    FILE *f = fopen(nomfichier, "a");
+
+    // Recherche de la chaîne c dans le fichier
+    Recherche(c, nomfichier, &trouv, &i, &j);
+
+    // Si la chaîne c est trouvée
+    if (trouv) {
+        // On avance de 3 positions dans le tableau
+        j = j + 3;
+
+        // Si on n'a pas dépassé la taille du tableau
+        if (j < b) {
+            // On remplace le caractère par 'V'
+            buf.tab[j] = 'V';
+
+            // On écrit le caractère dans le fichier
+            ecriredir(f, i, j);
+        }
     }
-    else
-    {
-        printf("\n   suppression impossible clé inexistante\n");
+    // Sinon
+    else {
+        // On affiche un message d'erreur
+        printf("L'élément n'existe pas !\n");
     }
+
+    // Fermeture du fichier
+    fclose(f);
 }
