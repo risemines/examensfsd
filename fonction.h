@@ -126,57 +126,109 @@ Buffer buf;
         (*i)++;
     }
 }
-// Fonction pour créer un nouvel étudiant
-Etudiant creationEtudiant(int n) {
-    Etudiant nouvelEtudiant;
-    sprintf(nouvelEtudiant.nom, "Nom%d", n);
-    sprintf(nouvelEtudiant.prenom, "Prenom%d", n);
-    sprintf(nouvelEtudiant.cle, "Cle%d", n);
-    sprintf(nouvelEtudiant.taille, "Tail%d", n);
+//creation ////////////////////////////////////////////////////////////////////////////////////////////////////
+void creation(LOV *liste, const char *nomFichier) {
+    liste->fichier = fopen(nomFichier, "wb+");
 
-    return nouvelEtudiant;
+    if (liste->fichier != NULL) {
+        // Initialiser l'entête
+        liste->entete.insert = 0;
+        liste->entete.nbloc = 1;
+        liste->entete.sup = 0;
+        liste->entete.premier = 1;
+
+        // Écrire l'entête dans le fichier
+        fseek(liste->fichier, 0, SEEK_SET);
+        fwrite(&(liste->entete), sizeof(Entete), 1, liste->fichier);
+
+        // Initialiser un bloc vide
+        Buffer blocVide;
+        blocVide.svt = 0;
+        blocVide.prd = 0;
+        blocVide.nbr = 0;
+
+        // Écrire le bloc vide dans le fichier (à la position de l'entête)
+        fseek(liste->fichier, sizeof(Entete), SEEK_SET);
+        fwrite(&blocVide, sizeof(Buffer), 1, liste->fichier);
+
+        fclose(liste->fichier);
+    } else {
+        printf("Erreur lors de l'ouverture du fichier.\n");
+        exit(EXIT_FAILURE);
+    }
 }
-
-// Fonction pour créer un élément dans la structure LOV
-void creation_f(LOV* f, int n) {
-    Etudiant nouvelEtudiant = creationEtudiant(n);
-
-    // Utilisez votre fonction d'insertion ici
-    // Ajoutez le nouvel étudiant à la liste
-    insertion(f, nouvelEtudiant);
-}
-
 // Fonction d'insertion d'un nouvel étudiant dans la structure LOV
-void insertion(LOV *liste, Etudiant nouvelEtudiant) {
-    // Recherche de l'emplacement où insérer le nouvel étudiant
-    int position = recherchePosition(liste, nouvelEtudiant);
+void insertion(LOV *f, Etudiant nouvelEtudiant) {
+    Buffer buf;
+    int i, j, k, L, t, N, cpt;
 
-    // Lecture du bloc à la position trouvée
-    Buffer buffer;
-    lireBloc(liste, position, &buffer);
+    // Trouver le bloc approprié pour l'insertion
+    int blocCourant = EnTete(f, 1); // Bloc de départ pour la recherche
+    int cleNouvelEtudiant = atoi(nouvelEtudiant.identifiant);
+    bool trouve = false;
 
-    // Ajout de l'étudiant dans le bloc
-    ajouterEtudiantAuBloc(&buffer, nouvelEtudiant);
+    while (blocCourant != 0 && !trouve) {
+        recherche(f, cleNouvelEtudiant, &trouve, &i, &j);
+        if (!trouve) {
+            blocCourant = EnTete(f, 1);
+            if (blocCourant != 0) {
+                lireBloc(f, blocCourant, &buf);
+                blocCourant = buf.svt; // Aller au bloc suivant
+            }
+        }
+    }
 
-    // Écriture du bloc mis à jour dans le fichier
-    ecrireBloc(liste, position, &buffer);
+    if (!trouve) {
+        // Effectuer l'insertion dans le bloc trouvé ou le dernier bloc si nécessaire
+        if (blocCourant == 0) {
+            blocCourant = allouerBloc(f); // Allouer un nouveau bloc si nécessaire
+        }
 
-    // Mise à jour de l'entête
-    affecterEntete(liste, 2, EnTete(liste, 2) + 1); // Incrémente le nombre de caractères insérés
+        // Lire le bloc courant
+        lireBloc(f, blocCourant, &buf);
 
-    // Si le bloc était plein, allouer un nouveau bloc
-    if (blocestplein(&buffer)) {
-        int nouveauBloc = allouerBloc(liste);
-        buffer.svt = nouveauBloc;
-        ecrireBloc(liste, position, &buffer);
+        // Extraire la taille de l'étudiant
+        L = atoi(nouvelEtudiant.taille);
+
+        // Trouver la position d'insertion dans le bloc
+        t = buf.nbr;
+
+        if (L + t <= MAX) {
+            k = 0;
+            N = j + 1;
+
+            while (N < MAX) {
+                buf.tab[k] = buf.tab[N];
+                k++;
+                N++;
+            }
+
+            cpt = 1;
+            while (cpt <= L) {
+                buf.tab[j] = nouvelEtudiant.nom[cpt - 1];
+                j++;
+                cpt++;
+            }
+
+            cpt = 1;
+            while (cpt <= k) {
+                buf.tab[j] = buf.tab[cpt - 1];
+                j++;
+                cpt++;
+            }
+
+            buf.nbr = L + t; // Mettre à jour le nombre de caractères dans le bloc
+            ecrireBloc(f, blocCourant, &buf); // Écrire le bloc mis à jour dans le fichier
+        } else {
+            // Traiter le cas où le bloc est plein
+            // Vous pouvez définir votre propre logique ici
+            printf("Le bloc est plein, veuillez traiter ce cas en conséquence.\n");
+        }
+    } else {
+        printf("L'identifiant existe déjà !\n");
     }
 }
 
-// Fonction pour ajouter un étudiant à un bloc
-void ajouterEtudiantAuBloc(Buffer *buffer, Etudiant nouvelEtudiant) {
-    // Logique d'ajout à définir selon la structure du bloc
-    // Assurez-vous que le nouvel étudiant est ajouté correctement dans le bloc.
-}
 
 //----------------------- fonction de la recherche dans le fichier--------------------------------------------//
 
