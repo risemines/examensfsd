@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "fonction.h"
-
+#include "header.h"
 
 
 int main()
@@ -114,27 +113,56 @@ int main()
                         Ouvrir(&f,"Etudiants.bin",'N');
                         Fermer(&f);
                     }
+                    printf("\n\n\t\t\tVeuillez entrer le matricule de l'etudiant que vous voulez inserer : ");
+                    scanf("%d",&matricule);
+                    insertion(&f,"Etudiants.bin",matricule,lectured(matricule));
+                    printf("\n\t\t\tContenu de l'entete : ");
+                    printf("\n\t\t\tAdresse du premier bloc : %d",Entete(&f,1));
+                    printf("\n\t\t\tNombre de caracteres inseres : %d",Entete(&f,2));
+                    printf("\n\t\t\tNombre de caracteres supprimes : %d",Entete(&f,3));
+                    printf("\n\t\t\tNombre total de blocs : %d",Entete(&f,4));
+                    printf("\n\t\t\tAdresse de la queue de la liste : %d",Entete(&f,5));
+                    printf("\n\t\t\tOperation effectuee avec succes\n");
+                    break;
+                }
+            case 4:
+                {
+                    system("cls");
+                    int matricule;
+                    if(test = fopen("Etudiants.bin","rb"))
+                    {
+                        fclose(test);
+                        printf("\n\n\t\t\tVeuillez entrer le matricule de l'etudiant que vous voulez supprimer : ");
+                        scanf("%d",&matricule);
+                        SuppressionLogique(&f,"Etudiants.bin",matricule);
+                        printf("\n\t\t\tContenu de l'entete : ");
+                        printf("\n\t\t\tAdresse du premier bloc : %d",Entete(&f,1));
+                        printf("\n\t\t\tNombre de caracteres inseres : %d",Entete(&f,2));
+                        printf("\n\t\t\tNombre de caracteres supprimes : %d",Entete(&f,3));
+                        printf("\n\t\t\tNombre total de blocs : %d",Entete(&f,4));
+                        printf("\n\t\t\tAdresse de la queue de la liste : %d",Entete(&f,5));
+                        printf("\n\t\t\tOperation effectuee avec succes\n");
+                    }
+                    else
+                    {
+                        printf("\n\n\t\t\tLe fichier n'existe pas, veuillez d'abord le creer au choix 1\n");
+                    }
 
-
-/*
-void affecterEntete(LOV *f,int i , int x);
-int EnTete(LOV *f, int i);
-void lireBloc( LOV *f, int i , Buffer *buf);
-void ecrireBloc(LOV *f, int i, Buffer *buf);
-LOV  ouvrir(LOV **f, char nom[]);
-void fermer(LOV *f);
-void allouerBloc(LOV *f);
-void turn_to_string(char chaine[], int n, int longueur);
-void recuperer_chaine(LOV *f,int n , int *i, int *j, char chaine[],Buffer *buf);
-void ecrire_chaine(LOV *f,int n , int *i, int *j, char chaine[],int *cpt,Buffer *buf);
-void recherche(LOV *f,int cle,int *trouv,int *i, int *j );
-void insertion(LOV *f, int cle, char *info) ;
-void suppression_logique(LOV *f, int cle);
-void afficher_bloc(LOV *f,int i);
-void afficher_f(LOV *f);
-void recherche_min(LOV *f,int MIN, int *i, int *j,int *val);
-int max_f(LOV *f);
-void reordonner_f(LOV *f1,char *nom);
-void creation_f(LOV *f,int n);
-void afficher_entete(LOV *f);
- */
+                    break;
+                }
+            default:
+                {
+                    fin = 1;
+                    break;
+                }
+        }
+        if(fin == 0)
+        {
+            printf("\n\t\t\tVoulez vous quitter?\n\t\t\t1-Oui 2-Non\n\t\t\tChoix : ");
+            scanf("%d",&choix);
+            if(choix == 1)
+                fin = 1;
+        }
+    }
+    return 0;
+}
