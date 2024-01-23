@@ -1,461 +1,631 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define MAX_CAR 1024
 #ifndef HEADER_H
 #define HEADER_H
 
-
-typedef struct donnee donnee;
-struct donnee{
- char matricule[10];
- char nom[14];
- char prenom[10];
- char annee;
- char* universite;
- char taille[10]; //sauv taille de l'enreg
- char eff; //chanps pr determiner si l'enreg est supp ou pas
- };
-
-typedef struct Buffer Buffer;
-struct Buffer{
- char tab[100]; //contient les enregistrements
- int svt; //champ pr l'adresse du bloc svt
- };
-typedef struct EnTete EnTete;
-struct EnTete{
- int bl_premier;
- int nb_insert;
- int nb_supp;
- int nb_bloc;
- int bl_dernier;
-};
-
-typedef struct LOV LOV;
-struct LOV{
-EnTete entete;
-FILE* fichier;
-};
-
-
-int Entete(LOV* f, int i){ //affiche un champ de l'entete selon le i
-switch(i){
- case 1: return f->entete.bl_premier;
- case 2: return f->entete.nb_insert;
- case 3: return f->entete.nb_supp;
- case 4: return f->entete.nb_bloc;
- case 5: return f->entete.bl_dernier;
- }
- }
-
-void aff_entete(LOV* f, int i, int val){ //affectation de val a un champ de l'entete
-switch(i){
- case 1:{
-   f->entete.bl_premier=val;
-   break;}
- case 2:{
-   f->entete.nb_insert=val;
-   break;}
- case 3:{
-   f->entete.nb_supp=val;
-   break;}
- case 4:{
-   f->entete.nb_bloc=val;
-   break;}
- case 5:{
-   f->entete.bl_dernier=val;
-   break;}
- }
-}
-
-
-void LireDir(LOV* f, int i, Buffer *buf){
- fseek(f->fichier, (sizeof(EnTete)+sizeof(Buffer)*(i-1)), SEEK_SET);//positionner le curseur a l'adresse i
- fread(buf, sizeof(Buffer),1,f->fichier);//lire le bloc
- }
-
-
-void EcrireDir(LOV* f, int i, Buffer *buf){
- fseek(f->fichier, (sizeof(EnTete)+sizeof(Buffer)*(i-1)), SEEK_SET);//positionner le curseur a l'adresse i
- fwrite(buf, sizeof(Buffer),1,f->fichier);//ecrire le bloc
- }
-
-void ouvrir(LOV* f, char* nom, char mode){
-if((mode=='n') || (mode =='N')){ //creer un nv fichier
-    f->fichier=fopen(nom, "wb+"); //ouvrir un nv fichier en mode ecriture
-    aff_entete(f,1,1);
-    aff_entete(f,2,0);
-    aff_entete(f,3,0);
-    aff_entete(f,4,0);
-    aff_entete(f,5,1);
-    fwrite(&(f->entete),sizeof(EnTete),1,f->fichier);}
-else{
-    if((mode=='a')||(mode=='A')){ //ouvrir un ancien fichier
-        f->fichier=fopen(nom, "rb+"); //ouvrir en mode lecture/ecriture
-        fread(&(f->entete),sizeof(EnTete),1,f->fichier);//lire l'entete et la charger dand l'entete
-    }
-}
-}
-
-
-void Fermer(LOV* f){
-fseek(f->fichier,0,SEEK_SET); //positionner le curseur au debut de f
-fwrite(&(f->entete), sizeof(EnTete),1,f->fichier); //sauv de lentete
-fclose(f->fichier); //fermer le f
-}
-
-void AllocBloc(LOV* f){ //allouer un nb bloc
- Buffer* buf=malloc(sizeof(Buffer));//allouer un espace pr le buf
- LireDir(f,Entete(f,5),buf);//lire le dernier bloc
- buf->svt=Entete(f,4)+1;//affecter svt sur le nv bloc
- int c= Entete(f,5);
- EcrireDir(f,c,&buf); //ecrire le dernier bloc
- strcpy(buf->tab, ""); //initialiser les info
- buf->svt=-1; //initialiser le bloc svt a -1
- c=Entete(f,4)+1;
- EcrireDir(f,c,buf); //ecrire le buf
- aff_entete(f,4,Entete(f,4)+1); //inc le nb total de blocs
- aff_entete(f,5,Entete(f,4)); //maj du dernier bloc;
- }
-
-void initialiserD(donnee* d){
-strcpy(d->matricule, "||||||||||||");
-strcpy(d->nom, "||||||||||||||");
-strcpy(d->prenom, "|||||||||||");
-d->taille[0]='0';
- for(int i=1;i<10;i++){
-    d->taille[i]='|';
-    d->eff='0';
- }
-}
-
-char* concat(donnee d){//concatene les champs en une seule chaine
-    char* ch;
-    ch=(char*)malloc(sizeof(char)*(37+10+strlen(d.universite)));
-    int j=0;
-    for(int i=0;i<10;i++){
-        if(d.taille[i]!='\0')
-            ch[j]=d.taille[i];
-        else
-            ch[j]='|';
-        j+=1;
-    }
-    ch[j]=d.eff; //Le champ effac�
-    j+=1;
-    for(int i=0;i<10;i++) //Le champ matricule
-    {
-        if(d.matricule[i]!='\0')
-            ch[j]=d.matricule[i];
-        else
-            ch[j]='|';
-        j+=1;
-    }
-    for(int i=0;i<14;i++) //Le champ nom
-    {
-        if(d.nom[i]!='\0')
-            ch[j]=d.nom[i];
-        else
-            ch[j]='|';
-        j+=1;
-    }
-    ch[j]=d.annee; //Le champ annee
-    j+=1;
-    for(int i=0;i<10;i++) //Le champ prenom
-    {
-        if(d.prenom[i]!='\0')
-            ch[j]=d.prenom[i];
-        else
-            ch[j]='|';
-        j+=1;
-    }
-    for(int i=0;i<strlen(d.universite);i++) //Le champ universite
-    {
-        ch[j]=d.universite[i];
-        j+=1;
-    }
-    ch[j] = '\0'; //Le dernier carat�re de la chaine
-    return ch; //Retourner la chaine conact�n�e
-}
-
-
-void RecupChamp(LOV* f,int n,Buffer* buf,int* i,int* j,char* donnee)//Recup�re le champ de l'enregistrement � partir du fichier
+typedef struct TblocLOV_C
 {
-    int k = 0;
-    while(k<n)
-    {
-        if(*j>=100) //En cas o� le champ est divis� sur plus d'un bloc
-        {
-            *i = buf->svt;
-            *j = 0; //R�nitiliser le j � 0 (au d�but du nouveau bloc)
-            LireDir(f,*i,buf); //Lire le bloc suivant
-        }
+    char tab[MAX_CAR];
+    int suivant;
+    int nb;     // NOMBRE DE CARATèRES INSéRéS DANS LE BLOC
+} TblocLOV_C;
 
-        if(buf->tab[*j]!='|') //Si le caract�re n'est pas un s�parateur
+typedef struct Ouvrage
+{
+    char    Identifiant[4];
+    char    Taille[3];
+    char    Efface[1];
+    char    Disponible[1];  // GENERER ALEATOIREMENT SOIT 1 SOIT 0
+    char    Type[1];        // GENERER ALEATOIREMENT DEPUIS UN ENSEMBLE TQ: '1'-LIVRE '2'-MEMOIRE/PFE '3'-ARTICL '4'-PéRIODIQUE
+    char    Anne[4];        // GENERER ALEATOIREMENT ENTRE 1950 ET 2021
+    /*LES CHAMPS VARIABLES */
+    char    Titre[25];      // ALEATOIREMENT (10~25)
+    char    Auteur[25];     // ALEATOIREMENT (10~25)
+    char    Cote[25];       //ALEATOIREMENT (10~25)
+    char    Resume[930];    // {(MAX_CAR -4-3-1-1-4-1-25-25-25 -5'SUPPLIMENTAIRES) POUR RESUMER= 930 }
+} Ouvrage;
+
+
+//LES CHAMPS QUI N'ONT PAS DE TAILLE FIXE SONT SéPARéS PAR LE CARACTèRE '$'
+
+typedef struct Entete
+{
+    int tete;       //NUMERO DU PREMIER BLOC
+    int inseres;    //NOMBRES GLOBAL DE CARATèRES INSéRéS
+    int supprimes;  //NOMBRES GLOBAL DE CARATèRE SUPPRIMéS
+    int nbBloc;     //NOMBRE DE BLOCS
+} Entete;
+
+typedef struct LOV_C
+{
+    FILE* fichier;
+    Entete entete;
+} LOV_C;
+
+typedef TblocLOV_C Buffer;
+Buffer buf;
+
+void ouvrir     (LOV_C **f, char nom[], char mode );
+void fermer     (LOV_C *f                         );
+int entete      (LOV_C *f, int i                  );
+void aff_entete (LOV_C *f, int i, int valeur      );
+void lireDir    (LOV_C *f, int i, Buffer *buf     );
+void ecrireDir  (LOV_C *f, int i, Buffer *buf     );
+int  allocBloc  (LOV_C *f                         );
+
+
+void ouvrir(LOV_C **f, char nom[], char mode)
+{
+    *f = malloc(sizeof(LOV_C));
+
+    if(mode == 'a' || mode == 'A')
+    {
+        (*f)->fichier = fopen(nom, "rb+");
+
+        if((*f)->fichier != NULL)
         {
-            donnee[k] = buf->tab[*j];
+            fread(&((*f)->entete), sizeof(Entete), 1, (*f)->fichier);
         }
-        else //Sinon mettre des caract�res vides
+    }
+    else if(mode == 'n' || mode == 'N')
+    {
+        (*f)->fichier = fopen(nom, "wb+");
+
+        if((*f)->fichier != NULL)
         {
-            donnee[k] = '\0';
+            (*f)->entete.tete = 1;
+            (*f)->entete.inseres = 0;
+            (*f)->entete.supprimes = 0;
+            (*f)->entete.nbBloc = 1;
         }
-        (*j)+=1;
-        k+=1;
     }
 }
 
-void RecupChaine(LOV* f,int n,Buffer* buf,int* i,int* j,char donnee[])
+
+void fermer(LOV_C *f)
 {
-    int k = 0;
-    while(k<n)
+    rewind(f->fichier);
+    fwrite(&(f->entete), sizeof(Entete), 1, f->fichier);
+    fclose(f->fichier);
+    free(f);
+}
+
+
+int entete(LOV_C *f, int i)
+{
+    if(i == 1)
+        return f->entete.tete;
+    else if(i == 2)
+        return f->entete.inseres;
+    else if(i == 3)
+        return f->entete.supprimes;
+    else if(i == 4)
+        return f->entete.nbBloc;
+    else
+        return -1;
+}
+
+
+void aff_entete(LOV_C *f, int i, int valeur)
+{
+    if(i == 1)
+        f->entete.tete = valeur;
+    else if(i == 2)
+        f->entete.inseres = valeur;
+    else if(i == 3)
+        f->entete.supprimes = valeur;
+    else if(i == 4)
+        f->entete.nbBloc = valeur;
+}
+
+
+void lireDir(LOV_C *f, int i, Buffer *buf)
+{
+    fseek(f->fichier, sizeof(Entete) + sizeof(TblocLOV_C)*(i-1), SEEK_SET);
+    fread(buf, sizeof(TblocLOV_C), 1, f->fichier);
+}
+
+
+void ecrireDir(LOV_C *f, int i, Buffer *buf)
+{
+    fseek(f->fichier, sizeof(Entete) + sizeof(TblocLOV_C)*(i-1), SEEK_SET);
+    fwrite(buf, sizeof(TblocLOV_C), 1, f->fichier);
+}
+
+
+int allocBloc(LOV_C *f)
+{
+    aff_entete(f, 4, entete(f, 4) + 1);
+    return entete(f, 4);
+}
+
+void creation_table_identifiantes(int *taille,int tmp_table[])
+{
+    int i,j,k,temp;
+    for (i=0; i<(*taille); i++) //boucle de generation
     {
-        if(*j>=100) //En cas où la chaine est divisée sur plus d'un bloc
-        {
-            *i = buf->svt;
-            *j = 0; //Rénitiliser le j à 0 (au début du nouveau bloc)
-            LireDir(f,*i,buf);
-        }
-
-        donnee[k] = buf->tab[*j];
-        (*j)+=1;
-        k+=1;
+        tmp_table[i]=Aleanombre(9999);  //le nombre maximum d'un identifiant est 9999
     }
-    donnee[k] = '\0';
+    for (i=0; i<(*taille); i++)//boucle de la supprition des reputitions
+    {
+
+        for (j=i+1; j<(*taille);)
+        {
+            if (tmp_table[i]==tmp_table[j])
+            {
+                for (k=j; k<(*taille); k++)
+                {
+                    tmp_table[k]=tmp_table[k+1];
+                }
+                (*taille)--;
+            }
+            else
+            {
+                j++;
+            }
+        }
+    }
+    for (i=0; i<(*taille); i++)//boucle du triage
+    {
+
+        for (j=0; j<(*taille); j++)
+        {
+
+            if (tmp_table[j]>tmp_table[j+1])
+            {
+                temp=tmp_table[j];
+                tmp_table[j]=tmp_table[j+1];
+                tmp_table[j+1]=temp;
+            }
+        }
+    }
+}
+/* *****************- MODULE DE CREATION DU FICHIER  LOV~C -******************/
+void creation_fichier_LOV_C(LOV_C **fichier)
+{
+    /*---------------------------*/
+    int  nb_ouvrages_au_debut;
+    int cle_entier,somme_des_tailles_entier,disponible_entier,type_entier,annee_publication_entier;
+    int taille_chaine_titre,taille_chaine_auteur,taille_chaine_cote,taille_chaine_resume;
+    char cle_char[4],somme_des_tailles_char[3],disponible_char[1],type_char[1],annee_publication_char[4];
+    int nb_globale_inseres=0,nbblocs=0,j=0,compteur_nb_caracteres_chaque_bloc=0;
+    Ouvrage Ouvrage_crier; //L'ARTUCLE QUE ON UTILISE TEMPOREREMENT
+    int i;   //COMPTEUR POUR ARRETER LA BOUCLE
+    int I0,I1; //ADRESSE BLOC
+    int taille_table;
+    int tmp_table[1024];//car il
+    taille_table = 5;//Aleanombre(60 );// ENTRE 1 ET 60 ARTUCLE AU DEBUT i.e: COMBIEN PEUT ON ECRIRE EN DEBUT
+    creation_table_identifiantes(&taille_table,tmp_table);
+    nb_ouvrages_au_debut =taille_table;
+    ouvrir(fichier,"Ouvrages.bin",'n');
+    I0= entete(*fichier,1);
+    for(    i=0 ;   i < nb_ouvrages_au_debut   ;   i++ )
+    {
+        cle_entier=tmp_table[i];
+        disponible_entier=Aleanombre(2);
+        type_entier= 1 + Aleanombre(4) ; //SOIT 1 2 3 4
+        annee_publication_entier= 1950 + Aleanombre(71);  // 2021-1950 = 71   PUISQUE L'AMPLUTIDE D'INTERVALE [1950;2021]
+        taille_chaine_titre=10+Aleanombre(15);  // MIN=10 CARACTERES , MAX=25 CARACTERES
+        taille_chaine_auteur=10+Aleanombre(15); // MIN=10 CARACTERES , MAX=25 CARACTERES  POUR DES RAISONS D'AFFICHAGE
+        taille_chaine_cote=10+Aleanombre(15);   // MIN=10 CARACTERES , MAX=25 CARACTERES
+        taille_chaine_resume=5+Aleanombre(905); // MIN=10 CARACTERES , MAX=1000 CARACTERES
+        somme_des_tailles_entier=4+3+1+1+1+4+taille_chaine_titre+1+taille_chaine_auteur+1+taille_chaine_cote+1+taille_chaine_resume+1;
+        //SOMME DU TAILLE DES CHAMPS:IDENTIFIANT+TAILLE+EFFACE+DISPONIBLE+TYPE+ANNE+TITRE+$+AUTEUR+$+COTE+$+RESUME
+        int_vers_string(cle_char,cle_entier,4);
+        int_vers_string(annee_publication_char,annee_publication_entier,4);
+           printf("\nis it working? cle :%s ",cle_char );
+        int_vers_string(somme_des_tailles_char,somme_des_tailles_entier,3);
+        int_vers_string(disponible_char,disponible_entier,1);
+        int_vers_string(type_char,type_entier,1);
+        /*AFFECTATION EN UN OUVRAGE */
+        strcpy(Ouvrage_crier.Identifiant, cle_char);
+        strcpy(Ouvrage_crier.Taille, somme_des_tailles_char);
+        strcpy(Ouvrage_crier.Efface, "0");
+        strcpy(Ouvrage_crier.Disponible, disponible_char  );
+        strcpy(Ouvrage_crier.Type, type_char);
+        strcpy(Ouvrage_crier.Anne, annee_publication_char );
+        //printf("\ncle :%s ",Ouvrage_crier.Anne );
+        char titre_chaine[taille_chaine_titre];
+        Aleachaine(titre_chaine, taille_chaine_titre);
+        strcpy(Ouvrage_crier.Titre, titre_chaine);
+
+        char auteur_chaine[taille_chaine_auteur];
+        Aleachaine(auteur_chaine, taille_chaine_auteur);
+        strcpy(Ouvrage_crier.Auteur, auteur_chaine );
+
+        char cote_chaine[taille_chaine_cote];
+        Aleachaine(cote_chaine, taille_chaine_cote);
+        strcpy(Ouvrage_crier.Cote, cote_chaine );
+
+        char resume_chaine[taille_chaine_resume];
+        Aleachaine(resume_chaine, taille_chaine_resume);
+        strcpy(Ouvrage_crier.Resume, resume_chaine );
+        compteur_nb_caracteres_chaque_bloc = somme_des_tailles_entier + compteur_nb_caracteres_chaque_bloc;
+        if (compteur_nb_caracteres_chaque_bloc<=MAX_CAR)
+        {
+                    printf("is it working?");
+            ecrire_chaine( 4, &j, Ouvrage_crier.Identifiant, &buf);
+            ecrire_chaine( 3, &j,Ouvrage_crier.Taille, &buf);
+            ecrire_chaine( 1, &j,Ouvrage_crier.Efface, &buf);
+            ecrire_chaine( 1, &j,Ouvrage_crier.Disponible, &buf);
+            ecrire_chaine( 1, &j,Ouvrage_crier.Type, &buf);
+            ecrire_chaine( 4, &j,Ouvrage_crier.Anne, &buf);
+            ecrire_chaine( taille_chaine_titre, &j,Ouvrage_crier.Titre, &buf);
+            ecrire_chaine( 1, &j,"$", &buf);   //SEPARATEUR ENTRE LES CHAMPS VARIABLES
+            ecrire_chaine( taille_chaine_auteur, &j,Ouvrage_crier.Auteur, &buf);
+            ecrire_chaine( 1, &j,"$", &buf);   //SEPARATEUR ENTRE LES CHAMPS VARIABLES
+            ecrire_chaine( taille_chaine_cote, &j,Ouvrage_crier.Cote, &buf);
+            ecrire_chaine( 1, &j,"$", &buf);   //SEPARATEUR ENTRE LES CHAMPS VARIABLES
+            ecrire_chaine( taille_chaine_resume, &j,Ouvrage_crier.Resume, &buf);
+            ecrire_chaine( 1, &j,"#", &buf);   //SEPARATEUR ENTRE LES CHAMPS VARIABLES
+            buf.nb =compteur_nb_caracteres_chaque_bloc;
+        }
+        else
+        {
+            I1 = allocBloc(*fichier);
+            buf.suivant= I1;
+            ecrireDir(*fichier,I0,&buf);
+               printf("bloc crier ok \n");//TEST
+            nb_globale_inseres = buf.nb + nb_globale_inseres;
+            nbblocs ++;
+            I0=I1;
+            compteur_nb_caracteres_chaque_bloc=somme_des_tailles_entier;//POUR NE PAS ECRAZER
+            j=0;
+               printf("%d\n",compteur_nb_caracteres_chaque_bloc );
+            ecrire_chaine( 4, &j, Ouvrage_crier.Identifiant, &buf);
+            ecrire_chaine( 3, &j,Ouvrage_crier.Taille, &buf);
+            ecrire_chaine( 1, &j,Ouvrage_crier.Efface, &buf);
+            ecrire_chaine( 1, &j,Ouvrage_crier.Disponible, &buf);
+            ecrire_chaine( 1, &j,Ouvrage_crier.Type, &buf);
+            ecrire_chaine( 4, &j,Ouvrage_crier.Anne, &buf);
+            ecrire_chaine( taille_chaine_titre, &j,Ouvrage_crier.Titre, &buf);
+            ecrire_chaine( 1, &j,"$", &buf);   //SEPARATEUR ENTRE LES CHAMPS VARIABLES
+            ecrire_chaine( taille_chaine_auteur, &j,Ouvrage_crier.Auteur, &buf);
+            ecrire_chaine( 1, &j,"$", &buf);   //SEPARATEUR ENTRE LES CHAMPS VARIABLES
+            ecrire_chaine( taille_chaine_cote, &j,Ouvrage_crier.Cote, &buf);
+            ecrire_chaine( 1, &j,"$", &buf);   //SEPARATEUR ENTRE LES CHAMPS VARIABLES
+            ecrire_chaine( taille_chaine_resume, &j,Ouvrage_crier.Resume, &buf);
+            ecrire_chaine( 1, &j,"#", &buf);   //SEPARATEUR ENTRE LES CHAMPS VARIABLES
+            buf.nb =compteur_nb_caracteres_chaque_bloc;
+            buf.suivant= -1;
+        }
+    }
+    ecrireDir(*fichier, I0,&buf);
+    nb_globale_inseres = buf.nb + nb_globale_inseres;
+    nbblocs ++;
+    aff_entete(*fichier, 2, nb_globale_inseres);
+    aff_entete(*fichier, 3, 0);
+    aff_entete(*fichier, 4, nbblocs);
+    fermer(*fichier);
 }
 
 
-char* lectured(int matricule)
+void extraire(char chaine[], int n, int* i)
 {
-    donnee d; //D�clarer d comme enregistrement
-    initialiserD(&d); //Initialiser les champs de d
-    sprintf(d.matricule,"%d",matricule); //Affectation
-    printf("\t\t\tEntrez le nom : ");
-    scanf("%s",&d.nom); //Lire le champ nom
-    printf("\t\t\tEntrez votre annee L(licence) ou M(master) : ");
-    scanf(" %c",&(d.annee)); //Lire le champ annee
-    printf("\t\t\tEntrez votre prenom : ");
-    scanf("%s",&d.prenom); //Lire le champ prenom
-    printf("\t\t\tEntrez votre universite (sans espaces): ");
-    d.universite = (char*)malloc(sizeof(char)*250);
-    scanf("%s",d.universite); //Lire le champ universite
-    sprintf(d.taille,"%d",10+1+35+strlen(d.universite));
-    return concat(d); //Retouner les champs concat�n�s
+    for(int j = 0; j < (n-1); j++)
+    {
+        chaine[j] = buf.tab[(*i)];
+        (*i)++;
+    }
+
+    chaine[n-1] = '\0';
 }
 
 
-void recherche(LOV* f,char* nom,int val,int* i,int* j,int* trouv)
+void recherche(LOV_C *f, int cle, int* trouve, int* i, int* j)
 {
-    Buffer buf; //Pour lire et �crire les blocs
-    int stop; //Pour stopper la boucle dans certaines conditions
-    int sauvi; //Pour sauvegarder i
-    int sauvj; //Pour sauvegarder j
-    char taille[10];
-    char matricule[10];
-    char eff;
-    char* d; //La chaine de carat�res d'un enregistrement apr�s le champ taille, eff et mat
-    int nb_taille,nb_mat; //Les champs taille et matricule en entiers
-
-    ouvrir(f,nom,'A'); //Ouvrir le fichier
-    *trouv = 0; //Positionner trouv � Faux
-    stop = 0; //Positionner stop � Faux
-    *i = Entete(f,1);
+    *trouve = 0;
+    *i = entete(f, 1);
     *j = 0;
-    LireDir(f,*i,&buf); //Lire le premier bloc
+    int jSauv;
+    char taille[4];
+    char identifiant[5];
+    char efface;
 
-    while((*trouv == 0)&&(stop == 0)) //Tant qu'on a pas trouv� le livret et que aucune condition n'a �t� v�rifi�e pour stopper la boucle
+    lireDir(f, *i, &buf);
+    jSauv = *j;
+    extraire(identifiant, 5, j);
+    efface = buf.tab[*j + 3];
+
+    while( atoi(identifiant) < cle)
     {
-        sauvi = *i; //Sauvegarder i
-        sauvj = *j; //Sauvegarder j
-        RecupChamp(f,10,&buf,i,j,taille); //Recup�rer le champ taille (le i et j sont mis � jour apr�s le champ)
-        nb_taille = atoi(taille); //R�cup�rer le champ en tant qu'entier
-        RecupChamp(f,1,&buf,i,j,&eff); //R�cup�rer le champ eff
-        RecupChamp(f,10,&buf,i,j,matricule); //R�cup�rer le champ num�ro
-        nb_mat = atoi(matricule); //R�cup�rer le champ en tant qu'entier
-        d = malloc(sizeof(char)*(nb_taille-10-10));
-        RecupChaine(f,nb_taille-10-11,&buf,&i,&j,&d); //R�cup�rer le reste de l'enregistrement
+        extraire(taille, 4, j);
+        *j = (*j) + atoi(taille) - 7;
 
-        if(nb_mat == val) //Le meme num�ro a �t� trouv�
+        if( (*j) >= buf.nb )  //si on a depassé le nombre de caratères insérés dans le bloc
         {
-            if(eff == '0')
-                *trouv = 1; //trouv � Vrai
-            else
-                stop = 1;
-            *i = sauvi; //R�cup�rer i avant d'avoir lu cet enregistrement
-            *j = sauvj; //R�cup�rer j avant d'avoir lu cet enregistrement
-        }
-        else
-        {
-            if(nb_mat>val) //Si la valeur recherch�e est inf�rieure � la valeur lue il ne sert � rien de continuer la recherche donc il faut la stopper
-            {
-                stop = 1; //stop � Vrai
-                *i = sauvi; //R�cup�rer i avant d'avoir lu cet enregistrement
-                *j = sauvj; //R�cup�rer j avant d'avoir lu cet enregistrement
-            }
-        }
-       if(buf.svt != -1){ //verifier si c le dernier bloc
-        *i=buf.svt; //sinon on avence au bloc suivant
-        *j=0; //initialiser lindice du debut du bloc
-        LireDir(f, i, &buf); //lire le bloc svt
-       }
-        free(d); //On lib�re l'espace
-    }
-    Fermer(f); //Fermer le fichier
-}
 
-void creation(LOV* f,char* nom,int nb_etudiant, int matricule)
-{
-    int i=1; //Se positionner au d�but du fichier
-    int j=0;
-    Buffer buf;
-    ouvrir(f,nom,'N'); //Ouvrir le fichier en mode nouveau
-    AllocBloc(f); //Allouer le premier bloc du fichier
-    for(int k=0;k<nb_etudiant;k++) //Ins�rer les livrets un par un
-    {
-        LireDir(f,i,&buf); //Lire le bloc
-        char* ch=lectured(matricule);
-        int l= 0;
-        while(l<strlen(ch)) //Ins�rer la donn�e caract�re par caract�re
-        {
-            if(j<100) //Si la position est inf�rieure � la taille du bloc
+            if(buf.suivant != -1)
             {
-                buf.tab[j] = ch[l]; //Ins�rer le caract�re
-                l+=1;
-                j+=1;
-            }
-            else //Si le caract�re doit s'ins�rer dans le bloc suivant
-            {
-                j=0;
-                EcrireDir(f,i,&buf); //On �crit le bloc
-                AllocBloc(f); //Alloue un nouveau bloc
-                i=Entete(f,5); //Met � jour l'adresse i
-                LireDir(f,i,&buf); //Lire le nouveau bloc
-            }
-        }
-        EcrireDir(f,i,&buf); //Ecrit le dernier bloc
-        aff_entete(f,2,Entete(f,2)+strlen(ch)); //Met � jour le nombre de caract�res ins�r�s dans l'ent�te
-    }
-    Fermer(f);
-}
-
-
-void insertion(LOV* f,char* nom,int matricule,char* donnee)
-{
-    Buffer buf;
-    int trouv;
-    int stop = 0;
-    int i = 1;
-    int j = 0;
-    int l = 0;
-    int rest;
-    recherche(f,nom,matricule,&i,&j,&trouv); //On effectue une recherche pour avoir l'adresse i et la position j o� ins�rer
-    if(trouv == 0) //Si le num�ro n'existe pas d�j� dans le fichier
-    {
-        ouvrir(f,nom,'A'); //Ouvrir le fichier en mode ancien
-        int sauvtaille = strlen(donnee); //On sauvegarde la taille du nouveau enregistrement
-        aff_entete(f,2,Entete(f,2)+sauvtaille); //Mettre � jour le champ (nombre de caract�res ins�r�s) de l'ent�te
-        char* d = (char*)malloc((sauvtaille)*sizeof(char)); //Allouer un espace m�moire de la m�me taille que le nouveau enregistrement
-        while(stop == 0) //Tant que l'insertion n'est pas finie
-        {
-            LireDir(f,i,&buf); //Lire le bloc � l'adresse i
-            if(j+sauvtaille<=100) //Si il y a assez de place pour l'enregistrement dans le bloc courant
-            {
-                for(int k=0;k<sauvtaille;k++)
-                {
-                    d[k] = buf.tab[j+k]; //Sauvegarder les caract�res qui se trouvaient d�j� dans la position o� on veut ins�rer
-                    buf.tab[j+k] = donnee[k]; //Ins�rer un carat�re du nouveau enregistrement
-                }
-                d[sauvtaille] = '\0';
-                EcrireDir(f,i,&buf); //Ecrire le bloc
-                j+=sauvtaille; //Faire avancer la position
-                strcpy(donnee,d); //Copier les caract�res sauvegard�s pr�c�demment dans la donn�e courante qu'on veut ins�rer
-            }
-            else //Si il n'y a pas assez de place pour l'enregistrement dans le bloc courant
-            {
-                rest = j+sauvtaille - 100; //Nombre de caract�res qu'on ins�rera dans le bloc suivant
-                l = 0;
-                while(j<100) //Ins�rer les caract�res jusqu'� la fin du bloc
-                {
-                    d[l] = buf.tab[j];
-                    buf.tab[j] = donnee[l];
-                    j++;
-                    l++;
-                }
-                EcrireDir(f,i,&buf); //Ecrire le bloc
-                i = buf.svt; //Passer au prochain bloc
-                j=0;
-                if(i == -1) //Si le bloc courant �tait le dernier bloc
-                {
-                    AllocBloc(f); //On alloue un nouveau bloc
-                    i = Entete(f,5); //Mettre � jour le champ (adresse de la queue) de l'ent�te
-                    stop = 1; //On stop l'insertion car on est arriv� au dernier bloc
-                }
-                LireDir(f,i,&buf); //Lire le nouveau bloc
-                for(int k=0;k<rest;k++) //Ins�rer les caract�res dans ce nouveau bloc
-                {
-                    d[l] = buf.tab[j];
-                    buf.tab[j] = donnee[l];
-                    j++;
-                    l++;
-                }
-                d[strlen(donnee)] = '\0';
-                EcrireDir(f,i,&buf); //Ecrire le bloc
-                strcpy(donnee,d); //Copier les caract�res sauvegard�s pr�c�demment dans la donn�e courante qu'on veut ins�rer
-            }
-            if(buf.svt = -1) //Si on arrive au dernier bloc et � la derni�re position
-            {
-                stop = 1; //On stoppe l'insertion
-            }
-        }
-        free(d);
-        Fermer(f);
-    }
-    else //Si le num�ro existe d�j� dans le fichier
-    {
-        printf("\t\t\tCe matricule existe deja\n");
-    }
-}
-
-void SuppressionLogique(LOV* f,char* nom,int matricule)
-{
-    int trouv;
-    int i,j;
-    int nb_taille;
-    Buffer buf;
-    char taille[10];
-    recherche(f,nom,matricule,&i,&j,&trouv); //On effectue d'abord une recherche
-    ouvrir(f,nom,'A'); //On ouvre le fichier en mode ancien
-    LireDir(f,i,&buf); //On lie le bloc
-    RecupChamp(f,10,&buf,&i,&j,taille); //On r�cup�re le champ taille
-    nb_taille = atoi(taille); //On le convertit en entier
-    if(trouv == 1)
-    {
-        if(j<100) //la position du champ eff est dans le bloc courant
-        {
-            buf.tab[j] = '1'; //On met � jour le champ � 1 ce qui signifie que la donn�e a �t� effac�
-            EcrireDir(f,i,&buf); //Ecrire le bloc
-        }
-        else //la position du champ eff est dans le bloc suivant
-        {
-            i = buf.svt; //On passe au bloc suivant
-            if(i == -1) //S'il n'existe pas c'est une erreur de conception
-            {
-                printf("\t\t\tERREUR: Le champ efface n'existe pas\n");
+                *i = buf.suivant;
+                *j = 0;
+                lireDir(f, *i, &buf);
             }
             else
             {
-                LireDir(f,i,&buf); //On lie ce bloc
-                buf.tab[100-j] = '1'; //On met � jour le champ � 1 ce qui signifie que la donn�e a �t� effac�
-                EcrireDir(f,i,&buf); //On �crit le bloc
+                break;
             }
         }
-        aff_entete(f,3,Entete(f,3)+nb_taille); //On met � jour le champ (nombre de caract�res supprim�s) de l'ent�te
-    }
-    else 
-    {
-        printf("\t\t\tLe champs d'etudiant que vous voulez supprimer n'existe pas\n");
+        jSauv = *j;
+        extraire(identifiant, 5, j);
+        efface = buf.tab[*j + 3];
     }
 
-    Fermer(f);
+    if(cle == atoi(identifiant) && efface == '0')
+    {
+        (*trouve) = 1;
+    }
+    if( atoi(identifiant) < cle)
+    {
+        extraire(taille, 4, j);
+        *j = (*j) + atoi(taille) - 3;
+        jSauv = *j;
+    }
+    *j = jSauv;
 }
 
+
+void insertion(LOV_C *f, char ouvrage[], int taille)
+{
+    int i, j, trouve, suivant;
+    char cle[5];
+    int k;
+    char* tmpData;
+    int tmpTaille;
+
+    strncpy(cle, ouvrage, 4);//RECUPERER LA CLé
+    cle[4] = '\0';
+
+    recherche(f, atoi(cle), &trouve, &i, &j);
+
+    if(trouve == 0)  //L'OUVRAGE N'EXISTE PAS DONC ON PEUT L'INSERER
+    {
+        lireDir(f, i, &buf);
+
+
+        if(taille <= (MAX_CAR - buf.nb) )  //IL Y A ASSEZ D'ESPACE DANS LE BLOC
+        {
+
+            tmpTaille = buf.nb - j;
+            if(tmpTaille > 0)
+            {
+                tmpData = malloc(sizeof(char) * tmpTaille);//RESERVER UNE CHAINE TEMPORAIRE POUR SAUVEGARDER LES DONNéES EXISTANTES
+            }
+
+            for(k = 0; k < tmpTaille; k++)  //SAUVEGARDER LES DONNéES EXISTANTES DANS UNE CHAINE TEMPORAIRE
+            {
+                tmpData[k] = buf.tab[j + k];
+            }
+
+
+            for(k = 0; k < taille; k++)  //INSERER LE NOUVEAU OUVRAGE
+            {
+                buf.tab[j] = ouvrage[k];
+                j++;
+            }
+
+            for(k = 0; k < tmpTaille; k++)
+            {
+                buf.tab[j] = tmpData[k];
+                j++;
+            }
+
+            buf.nb += taille;
+            ecrireDir(f, i, &buf);
+        }
+        else  //il n'y a pas assez d'espace dans le bloc
+        {
+            tmpTaille = buf.nb - j;
+            if(tmpTaille > 0)
+            {
+                tmpData = malloc(sizeof(char) * tmpTaille);//RESERVER UNE CHAINE TEMPORAIRE POUR SAUVEGARDER LES DONNéES EXISTANTES
+            }
+
+            for(k = 0; k < tmpTaille; k++)  //SAUVEGARDER LES DONNéES EXISTANTES DANS UNE CHAINE TEMPORAIRE
+            {
+                tmpData[k] = buf.tab[j + k];
+            }
+
+            suivant = buf.suivant;
+            buf.suivant = allocBloc(f);//ALLOUER UN NOUVEAU BLOC ET FAIRE LE CHAINAGE
+            buf.nb -= tmpTaille;//CAR ON VA DEPLACER LES DONNéES EXISTANTS DANS UN NOUVEAU BLOC
+            if(buf.nb > 0)
+            {
+                ecrireDir(f, i, &buf);//ECRIRE L'ANCIEN BLOC
+
+                i = buf.suivant;
+
+                for(k = 0; k < taille; k++)
+                {
+                    buf.tab[k] = ouvrage[k];
+                }
+
+                buf.nb = taille;
+            }
+            else  //DANS LE CAS Où LE NOUVEAU OUVRAGE DOIT éTRE INSéRé AU DEBUT
+            {
+                for(k = 0; k < taille; k++)
+                {
+                    buf.tab[j + k] = ouvrage[k];
+                }
+
+                buf.nb = taille;
+            }
+
+            if(tmpTaille <= (MAX_CAR - buf.nb))  //S'IL Y A ASSEZ D'ESPACE DANS LE NOUVEAU BLOC POUR METTRE LES DONNéES DéJA EXISTANTES DANS LE BLOC PRECEDANT
+            {
+                j = buf.nb;
+
+                for(k = 0; k < tmpTaille; k++)  //ECRIRE LES DONNéES EXISTANTES APRèS LE NOUVEAU OUVRAGE
+                {
+                    buf.tab[j] = tmpData[k];
+                    j++;
+                }
+
+                if(tmpTaille > 0)
+                {
+                    buf.nb += tmpTaille;
+                }
+
+                buf.suivant = suivant;//FAIRE LE CHAINAGE
+                ecrireDir(f, i, &buf);
+            }
+            else  //S'IL N'Y A PAS ASSEZ D'ESPACE DANS LE NOUVEAU BLOC POUR ECRIRE LES DONNéES EXISTANTES
+            {
+                buf.suivant = allocBloc(f);//ON ALLOUE UN AUTRE BLOC ET ON FAIT LE CHAINAGE
+                ecrireDir(f, i, &buf);
+                i = buf.suivant;
+
+                for(k = 0; k < tmpTaille; k++)
+                {
+                    buf.tab[k] = tmpData[k];
+                }
+
+                if(tmpTaille > 0)
+                {
+                    buf.nb = tmpTaille;
+                }
+
+                buf.suivant = suivant;
+                ecrireDir(f, i, &buf);
+            }
+        }
+
+        aff_entete(f, 2, entete(f, 2) + taille);
+        if(tmpData != NULL)
+            free(tmpData);//LIBERER LA CHAINE TEMPORAIRE
+
+        printf("L'ouvrage a ete insere\n");
+    }
+    else
+    {
+        printf("L'ouvrage existe deja!\n");
+    }
+
+}
+void lireOuvrage(char chaine[], int *taille)
+{
+    int identifiant, type, annee;
+    char titre[25], auteur[25], cote[25], resume[930];
+
+    do
+    {
+        printf("ENTREZ L'IDENTIFIANT (<= 9999):");
+        scanf("%d", &identifiant);
+    }
+    while(identifiant > 9999);
+
+    printf("ENTREZ LE TITRE DE L'OUVRAGE:");
+    scanf("%s", titre);
+
+    printf("ENTREZ LE(S) AUTEUR(S):");
+    scanf("%s", auteur);
+
+
+    do
+    {
+        printf("LE TYPE DE L'OUVRAGE:\n");
+        printf("1-TEXT IMPRIME\n");
+        printf("2-DOCUMENT ELECTRONIQUE\n");
+        printf("3-ARTICLE\n");
+        printf("4-PERIODIQUE\n");
+        printf("ENTREZ LE NUMERO CORRESPONDANT AU TYPE:");
+        scanf("%d", &type);
+    }
+    while(type < 1 || type > 4);
+
+
+    do
+    {
+        printf("ENTREZ L'ANNEE DE PUBLICATION DE L'OUVRAGE (COMPRIS ENTRE 1950 ET 2021):");
+        scanf("%d", &annee);
+    }
+    while(annee < 1950 || annee > 2021);
+
+
+    printf("ENTREZ LA COTE DE L'OUVRAGE:");
+    scanf("%s", cote);
+
+    printf("ENTREZ LE RESUME DE L'OUVRAGE:");
+    scanf("%s", resume);
+
+    //taille = identifiant(4) + taille(3) + effacé(1) + disponible(1) + type(1) + annee(4) + titre + $ + auteur + $ + cote + $ + resume + $ + #
+    *taille = 4 + 3 + 1 + 1 + 1 + 4 + strlen(auteur) + 1 + strlen(titre) + 1 + strlen(cote) + 1 + strlen(resume) + 1;
+
+    sprintf(chaine, "%04d%03d01%d%d%s$%s$%s$%s#", identifiant, *taille, type, annee, titre, auteur, cote, resume);
+}
+
+void affichage_fichier_LOV_C(LOV_C **fichier)
+{
+    int I0; //ADRESSE BLOC
+    int cmpt=1,j=0;
+    ouvrir(fichier,"Ouvrages.bin",'A');
+    I0 = entete(*fichier,1);
+
+    while (I0 != -1)
+    {
+        lireDir(*fichier, I0, &buf);
+        printf("\nBLOC Ouvrages.bin : %3d\n",cmpt);
+
+        for (j=0; j<buf.nb ; j++)
+        {
+            printf("%c",buf.tab[j]);
+        }
+        I0 = buf.suivant;
+        cmpt++;
+    }
+    fermer(*fichier);
+}
+int Aleanombre( int N )
+{
+    return ( rand() % N );
+}
+/* *****************- MODULE MOT ALEATOIRE -******************/
+void  Aleachaine ( char chaine[], int N )
+{
+    int k;
+    char Chr1[26] = "abcdefghijklmnopqrstuvwxyz";
+    char Chr2[26] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    for (k=0; k<N; k++)
+    {
+        switch ( rand() % 2 )
+        {
+        case 0 :
+            chaine[k] = Chr1[rand() % 26];
+            break ;
+        case 1 :
+            chaine[k] = Chr2[rand() % 26];
+            break ;
+        }
+    }
+}
+/* *****************- MODULE UN NOMBRE EN UNE CHAINE SUR UNE LONGEUR DETERMINER -******************/
+void int_vers_string(char chaine[], int n, int longueur)
+{
+
+    int k;
+    for(k=longueur-1; k>=0; k--)
+    {
+        chaine[k]=(n%10)+'0';          // EXTRACTION CHIFFRE PAR CHIFFRE
+        n=n/10;                        // CHIFFRE SUIVANT
+    }
+}
+/* *****************- MODULE POUR ECRIRE LA CHAINE DE CARACTERES EN BUFFER -******************/
+void ecrire_chaine( int n, int *j, char chaine[], Buffer *buf)
+{
+    int k;
+    for(k=0; k<n; k++)
+    {
+        if((*j)<=MAX_CAR)
+        {
+            buf->tab[*j]=chaine[k];
+            (*j)++;
+        }
+    }
+}
 #endif
 
 
+       
