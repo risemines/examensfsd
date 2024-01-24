@@ -50,6 +50,18 @@ void aff_entete (LOV_C *f, int i, int valeur      );
 void lireDir    (LOV_C *f, int i, Buffer *buf     );
 void ecrireDir  (LOV_C *f, int i, Buffer *buf     );
 int  allocBloc  (LOV_C *f                         );
+void generer(int *taille,int tmp_table[]);
+void creation(LOV_C **fichier);
+void extraire(char chaine[], int n, int* i);
+void recherche(LOV_C *f, int cle, int* trouve, int* i, int* j);
+void insertion(LOV_C *f, char etudiant[], int taille);
+void lire(char chaine[], int *taille);
+void affichage(LOV_C **fichier, int i);
+int Aleanombre( int N );
+void  Aleachaine ( char chaine[], int N );
+void int_vers_string(char chaine[], int n, int longueur) ;
+void ecrire_chaine( int n, int *j, char chaine[], Buffer *buf);
+void Suppressionlogique(LOV_C *f,char c[20]) ;
 
 
 void ouvrir(LOV_C **f, char nom[], char mode) //permet l'overture du fichier
