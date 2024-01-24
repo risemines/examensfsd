@@ -551,7 +551,6 @@ void affichage(LOV_C **fichier, int i) {
 	ouvrir(fichier, "Etudiant.bin", 'a');
 	lireDir(*fichier, i, &buf);
 
-	printf("Entrez le nombre du bloc:\n", i);
 	int j = 0;
 
 	while(j < buf.nb) {
