@@ -319,3 +319,385 @@ void recherche(LOV_C *f, int cle, int* trouve, int* i, int* j) //recherche d'un 
     char efface; //verifier sa existence
 
     lireDir(f, *i, &buf); //lire le bloc
+
+
+
+
+  jSauv = *j; //pr sauvgrader le j
+    extraire(identifiant, 5, j); //extraire l'identfiant du bloc
+    efface = buf.tab[*j + 3]; //recupere le champ 'efface'
+
+    while( atoi(identifiant) < cle) //si'il est inferieur avencer
+    {
+        extraire(taille, 4, j); //extraire la taille
+        *j = (*j) + atoi(taille) - 7; //bloc suivant
+
+        if( (*j) >= buf.nb )  //verifier on a depassé le nombre de caratères insérés dans le bloc
+        {
+
+            if(buf.suivant != -1) //verifier si on n'est pas a la fin
+            {
+                *i = buf.suivant; //avencer
+                *j = 0; //debut du bloc
+                lireDir(f, *i, &buf); //lire le bloc
+            }
+            else
+            {
+                break;
+            }
+        }
+        jSauv = *j; //sauvgarder le j
+        extraire(identifiant, 5, j); //recuperer l'identifiant
+        efface = buf.tab[*j + 3]; //verifier l'existence
+    }
+
+    if(cle == atoi(identifiant) && efface == '0')  //si il sont egaux et le bloc existe
+    {
+        (*trouve) = 1; //on a trouver
+    }
+    if( atoi(identifiant) < cle) //si on est dans le meme bloc
+    {
+        extraire(taille, 4, j); //recupere la taille
+        *j = (*j) + atoi(taille) - 3; //au enregistrement suivant
+        jSauv = *j;
+    }
+    *j = jSauv; //recuperer j
+}
+
+
+void insertion(LOV_C *f, char etudiant[], int taille) //insertion dun enregistrement
+{
+    int i, j, trouve, suivant;
+    char cle[5];
+    int k;
+    char* tmpData;
+    int tmpTaille;
+
+    strncpy(cle, etudiant, 4);//recuperer l'identifiant
+    cle[4] = '\0';
+
+    recherche(f, atoi(cle), &trouve, &i, &j); //verifier s'il l'identifiant existe
+
+    if(trouve == 0) //s'il n'existe pas
+    {
+        lireDir(f, i, &buf); //lire le bloc
+
+
+        if(taille <= (MAX_CAR - buf.nb) ) //verifier si il ya d'espace dans le bloc
+        {
+
+            tmpTaille = buf.nb - j; //recuperer la taille des donnees
+            if(tmpTaille > 0)
+            {
+                tmpData = malloc(sizeof(char) * tmpTaille); //pr sauvgarder les donnees existante
+            }
+
+            for(k = 0; k < tmpTaille; k++) //l'affecter dans la chaine temporairement
+            {
+                tmpData[k] = buf.tab[j + k];
+            }
+
+
+            for(k = 0; k < taille; k++)//affecter les nv donnees a la position j
+            {
+                buf.tab[j] = etudiant[k];
+                j++;
+            }
+
+            for(k = 0; k < tmpTaille; k++)//retourner les donnes dans leur positions apres le nv
+            {
+                buf.tab[j] = tmpData[k];
+                j++;
+            }
+
+            buf.nb += taille; //maj le nb de caracteres inseres
+            ecrireDir(f, i, &buf); //ecrire le buffer
+        }
+        else
+        {
+            tmpTaille = buf.nb - j; //recuperer la taille des donnes restantes
+            if(tmpTaille > 0)
+            {
+                tmpData = malloc(sizeof(char) * tmpTaille); //allocation pr sauvgarder les donnes
+            }
+
+            for(k = 0; k < tmpTaille; k++)
+            {
+                tmpData[k] = buf.tab[j + k]; //l'affecter temporairement dans une chaine
+            }
+
+            suivant = buf.suivant;
+            buf.suivant = allocBloc(f); //allocation d'un nv bloc
+            buf.nb -= tmpTaille; //maj du nb de blocs deplacer les donnes dans un nv bloc
+            if(buf.nb > 0)
+            {
+                ecrireDir(f, i, &buf); //ecrire le bloc
+
+                i = buf.suivant;
+
+                for(k = 0; k < taille; k++) //inserer les donnes
+                {
+                    buf.tab[k] = etudiant[k];
+                }
+
+                buf.nb = taille;
+            }
+            else //si on doit inserer au debut de bloc
+            {
+                for(k = 0; k < taille; k++)
+                {
+                    buf.tab[j + k] = etudiant[k];
+                }
+
+                buf.nb = taille;
+            }
+
+            if(tmpTaille <= (MAX_CAR - buf.nb)) // si il y d'espace
+            {
+                j = buf.nb;
+
+                for(k = 0; k < tmpTaille; k++) //inserer les donnes
+                {
+                    buf.tab[j] = tmpData[k];
+                    j++;
+                }
+
+                if(tmpTaille > 0)
+                {
+                    buf.nb += tmpTaille;
+                }
+
+                buf.suivant = suivant; //passer au bloc svt
+                ecrireDir(f, i, &buf); //ecrire le bloc
+            }
+            else // pas d'espace
+            {
+                buf.suivant = allocBloc(f); //allouer un nv bloc
+                ecrireDir(f, i, &buf); //ecrire le bloc
+                i = buf.suivant; //passer au nv bloc
+
+                for(k = 0; k < tmpTaille; k++) //inserer
+                {
+                    buf.tab[k] = tmpData[k];
+                }
+
+                if(tmpTaille > 0)
+                {
+                    buf.nb = tmpTaille;
+                }
+
+                buf.suivant = suivant;
+                ecrireDir(f, i, &buf);
+            }
+        }
+
+        aff_entete(f, 2, entete(f, 2) + taille); //maj l'entete
+        if(tmpData != NULL)
+            free(tmpData); //liberer
+
+        printf("\nL'etudiant a ete insere\n");
+    }
+    else
+    {
+        printf("\nL'etudiant existe deja!\n");
+    }
+
+}
+void lire(char chaine[], int *taille) //lire les donnees
+{
+    int identifiant, annee, bac;
+    char nom[25], prenom[25], specialite[25], universite[930];
+
+    do //boucle pour assurer qu'on entre un identifiant correct
+    {
+        printf("Entrez un identifiant (<= 9999):");
+        scanf("%d", &identifiant);
+    }
+    while(identifiant > 9999);
+
+    printf("Entrez votre nom:");
+    scanf("%s", nom);
+
+    printf("Entrez votre prenom:");
+    scanf("%s", prenom);
+
+    do
+    {
+        printf("Entrez votre annee universitaire(un seul chiffre): ");
+        scanf("%d", &annee);
+    }
+    while(annee < 1 || annee > 5);
+
+
+    do
+    {
+        printf("Entrez votre annee de bac: ");
+        scanf("%d", &bac);
+    }
+    while(bac < 1990 || bac > 2023);
+
+
+    printf("Entrez votre specialite: ");
+    scanf("%s", specialite);
+
+    printf("Entrez votre universite: ");
+    scanf("%s", universite);
+    *taille = 4 + 3 + 1 + 1 + 1 + 4 + strlen(prenom) + 1 + strlen(nom) + 1 + strlen(specialite) + 1 + strlen(universite) + 1; //affecter la taille
+
+    sprintf(chaine, "%04d%03d01%d%d%s$%s$%s$%s#", identifiant, *taille, annee, bac, nom, prenom, specialite, universite); //affecter le tout dans une seule chaine
+}
+
+void affichage(LOV_C **fichier, int i) {
+	ouvrir(fichier, "Etudiant.bin", 'a');
+	lireDir(*fichier, i, &buf);
+
+	printf("Entrez le nombre du bloc:\n", i);
+	int j = 0;
+
+	while(j < buf.nb) {
+		printf("Identifiant: ");
+		printf("%c%c%c%c\n", buf.tab[j], buf.tab[j+1], buf.tab[j+2], buf.tab[j+3]);
+		j += 4;
+		printf("Taille: ");
+		printf("%c%c%c\n", buf.tab[j], buf.tab[j+1], buf.tab[j+2]);
+		j += 3;
+		printf("Efface: ");
+		printf("%s\n",buf.tab[j] == '0' ? "NON" : "OUI");
+		j++;
+		printf("Disponible: ");
+		printf("%s\n", buf.tab[j] == '0' ? "NON" : "OUI");
+		j++;
+		printf("Annee universitaire: ");
+		switch(buf.tab[j]) {
+			case '1':
+				printf("Licence 1\n");
+				break;
+			case '2':
+				printf("Licence 2\n");
+				break;
+			case '3':
+				printf("Licence 3\n");
+				break;
+			case '4':
+				printf("Master 1\n");
+				break;
+            case '5':
+				printf("Master 2\n");
+				break;
+		}
+
+		j++;
+		printf("Annee de bac: ");
+		printf("%c%c%c%c\n", buf.tab[j], buf.tab[j+1], buf.tab[j+2], buf.tab[j+3]);
+		j += 4;
+		printf("Nom: ");
+		while(buf.tab[j] != '$') {
+			printf("%c", buf.tab[j]);
+			j++;
+		}
+
+		j++;
+
+		printf("\nPrenom: ");
+		while(buf.tab[j] != '$') {
+			printf("%c", buf.tab[j]);
+			j++;
+		}
+
+		j++;
+		printf("\nSpecialite: ");
+		while(buf.tab[j] != '$') {
+			printf("%c", buf.tab[j]);
+			j++;
+		}
+		j++;
+		printf("\nUniversite: ");
+		while(buf.tab[j] != '#') {
+			printf("%c", buf.tab[j]);
+			j++;
+		}
+		j++;
+		printf("\n-----------------------------------------------------------------------------------------------------------\n");
+	}
+
+}
+
+int Aleanombre( int N ) //generer un nombre aleatoirement
+{
+    return ( rand() % N );
+}
+
+void  Aleachaine ( char chaine[], int N ) //generer une chaine aleatoirement
+{
+    int k;
+    char Chr1[26] = "abcdefghijklmnopqrstuvwxyz";
+    char Chr2[26] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    for (k=0; k<N; k++)
+    {
+        switch ( rand() % 2 )
+        {
+        case 0 :
+            chaine[k] = Chr1[rand() % 26];
+            break ;
+        case 1 :
+            chaine[k] = Chr2[rand() % 26];
+            break ;
+        }
+    }
+}
+
+void int_vers_string(char chaine[], int n, int longueur) //conversion d'un entier vers une chaine de caracters
+{
+
+    int k;
+    for(k=longueur-1; k>=0; k--)
+    {
+        chaine[k]=(n%10)+'0';
+        n=n/10;
+    }
+}
+
+void ecrire_chaine( int n, int *j, char chaine[], Buffer *buf) //affecter la chaine dans le buffer de taille n
+{
+    int k;
+    for(k=0; k<n; k++)
+    {
+        if((*j)<=MAX_CAR)
+        {
+            buf->tab[*j]=chaine[k];
+            (*j)++;
+        }
+    }
+}
+
+void Suppressionlogique(LOV_C *f,char c[20]) { //suppression logique d'un bloc
+
+    int trouv,i, j;
+
+    ouvrir(f, "Etudiant.bin", 'A'); // ouvrir le fichier en mode ajout
+
+    recherche(f,c, &trouv, &i, &j); // rechercher l'élément à supprimer
+
+    if (trouv==1) { // si l'élément existe
+
+        j = j + 7; // se positionner après l'élément
+
+        if (j < MAX_CAR) { // si on n'est pas à la fin du fichier
+
+            buf.tab[j] = '1'; // marquer l'élément comme supprimé
+            ecrireDir(f, i, &buf); // écrire le changement dans le fichier
+            //aff_entete(f,3,Entete(f,3)+nb_taille);
+        }
+
+    } else { // si l'élément n'existe pas
+
+        printf("L'élément n'existe pas!\n"); // afficher un message d'erreur
+
+    }
+
+    fermer(f); // fermer le fichier
+
+}
+
+#endif
+
