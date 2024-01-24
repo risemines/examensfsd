@@ -1,0 +1,12 @@
+# depslib dependency file v1.0
+1706057245 source:c:\users\jsyas\onedrive\documents\lastversiontaesah\main.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	"header.h"
+
+1706057252 c:\users\jsyas\onedrive\documents\lastversiontaesah\header.h
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+
