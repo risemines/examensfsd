@@ -22,7 +22,7 @@ int main()
     	printf("2) Rechercher un etudiant dans le fichier 'Etudiant.bin'\n");
     	printf("3) Inserer un etudiant dans le fichier 'Etudiant.bin'\n");
     	printf("4) Afficher un bloc dans le fichier 'Etudiant.bin'\n");
-    	printf("Veuillez entrer votre choix: ");
+        printf("Veuillez entrer votre choix: ");
     	scanf("%d", &choix);
 
 switch(choix) {
