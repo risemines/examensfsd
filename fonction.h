@@ -669,17 +669,15 @@ void ecrire_chaine( int n, int *j, char chaine[], Buffer *buf) //affecter la cha
     }
 }
 
-void Suppressionlogique(LOV_C *f,char c[20]) { //suppression logique d'un bloc
+void Suppressionlogique(LOV_C *f,int c) { //suppression logique d'un bloc
 
     int trouv,i, j;
-
-    ouvrir(f, "Etudiant.bin", 'A'); // ouvrir le fichier en mode ajout
 
     recherche(f,c, &trouv, &i, &j); // rechercher l'élément à supprimer
 
     if (trouv==1) { // si l'élément existe
 
-        j = j + 7; // se positionner après l'élément
+        j = j + 8; // se positionner après l'élément
 
         if (j < MAX_CAR) { // si on n'est pas à la fin du fichier
 
